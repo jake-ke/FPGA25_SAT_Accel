@@ -1,6 +1,6 @@
 #include <hls_stream.h>
 #include <ap_axi_sdata.h>
-#include <ap_utils.h>
+#include <etc/ap_utils.h>
 #include "data_structures.h"
 
 

@@ -1,6 +1,6 @@
 #include <hls_stream.h>
 #include <ap_axi_sdata.h>
-#include <ap_utils.h>
+#include <etc/ap_utils.h>
 #include "data_structures.h"
 
 void copyCls(ap_uint<128> mClsStore[_FPGA_MAX_LITERAL_ELEMENTS/4], ap_uint<128>* clauseStore, const unsigned int clauseElements){

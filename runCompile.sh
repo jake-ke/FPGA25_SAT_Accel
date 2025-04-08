@@ -19,9 +19,9 @@ FREQ[5]=200000000
 FREQ[6]=200000000
 EMU_TYPE=sw_emu
 LIB_EMU_TYPE=-lxrt_swemu
-VER=2022.2
+VER=2024.1
 EN_PROF=""
-PLATFORM=xilinx_u55c_gen3x16_xdma_3_202210_1
+PLATFORM=xilinx_aws-vu47p-f2_202410_1
 
 OPENCL_FILES_CPP="host.cpp xcl2.cpp"
 OPENCL_FILES_OBJ="host.o xcl2.o"
@@ -43,16 +43,14 @@ VITIS_HLS_KERNEL[4]="timer"
 VITIS_HLS_KERNEL[5]="pqHandler"
 VITIS_HLS_KERNEL[6]="message"
 
-VITIS_INCLUDE="/opt/xilinx/tools/Vitis_HLS/$VER/include"
-XRT_INCLUDE="/opt/xilinx/xrt/include"
+VITIS_INCLUDE=$XILINX_HLS/include
+XRT_INCLUDE="$XILINX_XRT/include"
 
-DATA_PATH="/home/milo168/Desktop/SAT_workspace/SAT_test_cases"
 
 CONNECTIVITY="k2k.cfg"
 
-#TODO: YOU MUST POINT TO YOUR XRT AND VITIS_HLS INSTALL PATH
-source /opt/xilinx/xrt/setup.sh
-source /opt/xilinx/tools/Vitis_HLS/$VER/settings64.sh
+# source /opt/xilinx/xrt/setup.sh
+# source $XILINX_VITIS/settings64.sh
 
 compile_opencl(){
 	IS_HW_SIM="-DHW_SIM"

@@ -1,5 +1,5 @@
 #include <hls_stream.h>
-#include <ap_utils.h>
+#include <etc/ap_utils.h>
 #include <ap_axi_sdata.h>
 #include "data_structures.h"
 #include "priority_queue_functions.h"

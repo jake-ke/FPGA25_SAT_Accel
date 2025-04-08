@@ -1,0 +1,4 @@
+src/bin
+src/emconfig_out/
+src/*.log
+_x/

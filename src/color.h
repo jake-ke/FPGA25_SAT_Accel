@@ -3,7 +3,7 @@
 
 #include "fpga_solver.h"
 #include "hls_burst_maxi.h"
-#include "ap_utils.h"
+#include "etc/ap_utils.h"
 #include "data_structures.h"
 
 void colorStream(hls::stream<colorValue>* toStateUpdater, 
