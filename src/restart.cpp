@@ -6,7 +6,7 @@
 #include <thread>
 #endif
 
-void readStopStream(hls::stream<bool>& stopInternal, hls::stream<ap_axiu<1,0,0,0>>& stop){
+void readStopStream(hls::stream<bool>& stopInternal, hls::stream<ap_axiu<8,0,0,0>>& stop){
     #pragma HLS inline off
 
     stopInternal.write(stop.read().data);
@@ -15,7 +15,7 @@ void readStopStream(hls::stream<bool>& stopInternal, hls::stream<ap_axiu<1,0,0,0
 #ifdef FPGA_HW
 void calculate(hls::stream<unsigned int>& valueInternal, hls::stream<bool>& stopInternal){
 #else
-void calculate(hls::stream<ap_axiu<32,0,0,0>>& value, hls::stream<ap_axiu<1,0,0,0>>& stop){
+void calculate(hls::stream<ap_axiu<32,0,0,0>>& value, hls::stream<ap_axiu<8,0,0,0>>& stop){
 #endif
     #pragma HLS inline off
     unsigned int count = 1;
@@ -59,7 +59,7 @@ void calculate(hls::stream<ap_axiu<32,0,0,0>>& value, hls::stream<ap_axiu<1,0,0,
         }
         #else
         count++;
-        ap_axiu<1,0,0,0> pkt;
+        ap_axiu<8,0,0,0> pkt;
         stop.read_nb(pkt);
         if(pkt.data){
             break;
@@ -87,7 +87,7 @@ void writeValueStream(hls::stream<ap_axiu<32,0,0,0>>& value, hls::stream<unsigne
 }
 
 extern "C"{
-void restartCalculator(hls::stream<ap_axiu<32,0,0,0>>& value, hls::stream<ap_axiu<1,0,0,0>>& stop){
+void restartCalculator(hls::stream<ap_axiu<32,0,0,0>>& value, hls::stream<ap_axiu<8,0,0,0>>& stop){
 
 	#pragma HLS INTERFACE axis port=value
     #pragma HLS INTERFACE axis port=stop

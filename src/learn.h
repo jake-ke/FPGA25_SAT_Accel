@@ -78,6 +78,6 @@ void learnClause(clsState clsStates[_FPGA_CLS_STATES_PARTITION][_FPGA_MAX_CLAUSE
     hls::stream<ap_axiu<96,0,0,0>>& clauseStoreInputStream1, hls::stream<ap_axiu<96,0,0,0>>& clauseStoreInputStream2,
     hls::stream<ap_axiu<32,0,0,0>>& clauseStoreOutputStream1, hls::stream<ap_axiu<32,0,0,0>>& clauseStoreOutputStream2,
     hls::stream<ap_axiu<32,0,0,0>>& pqHandlerInput, hls::stream<ap_axiu<32,0,0,0>>& pqHandlerValue,
-    hls::stream<ap_axiu<64,0,0,0>>& timerValueStream, hls::stream<ap_axiu<1,0,0,0>>& conditionStream, ap_uint<64>* cycleCounter);
+    hls::stream<ap_axiu<64,0,0,0>>& timerValueStream, hls::stream<ap_axiu<8,0,0,0>>& conditionStream, ap_uint<64>* cycleCounter);
 
 #endif

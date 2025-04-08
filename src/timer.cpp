@@ -23,12 +23,12 @@ void wrapTimer(hls::stream<ap_uint<1>>& wrapConditionStream, hls::stream<ap_axiu
     }
 }
 
-void wrapCondition(hls::stream<ap_uint<1>>& wrapConditionStream, hls::stream<ap_axiu<1,0,0,0>>& condition){
+void wrapCondition(hls::stream<ap_uint<1>>& wrapConditionStream, hls::stream<ap_axiu<8,0,0,0>>& condition){
     #pragma HLS inline off
 
     WRAP: while(true){
         #pragma HLS loop_tripcount min=10 max=10
-        ap_axiu<1,0,0,0> read = condition.read();
+        ap_axiu<8,0,0,0> read = condition.read();
         wrapConditionStream.write(read.data);
         if(read.data == 0){
             break;
@@ -36,7 +36,7 @@ void wrapCondition(hls::stream<ap_uint<1>>& wrapConditionStream, hls::stream<ap_
     }
 }
 
-void timerDataflow(hls::stream<ap_axiu<1,0,0,0>>& condition, hls::stream<ap_axiu<64,0,0,0>>& value){
+void timerDataflow(hls::stream<ap_axiu<8,0,0,0>>& condition, hls::stream<ap_axiu<64,0,0,0>>& value){
     #pragma HLS inline off
 
     hls::stream<ap_uint<1>> wrapConditionStream;
@@ -47,7 +47,7 @@ void timerDataflow(hls::stream<ap_axiu<1,0,0,0>>& condition, hls::stream<ap_axiu
 }
 
 extern "C"{
-void timer(hls::stream<ap_axiu<1,0,0,0>>& condition, hls::stream<ap_axiu<64,0,0,0>>& value){
+void timer(hls::stream<ap_axiu<8,0,0,0>>& condition, hls::stream<ap_axiu<64,0,0,0>>& value){
 
 	#pragma HLS INTERFACE axis port=value
     #pragma HLS INTERFACE axis port=condition
@@ -57,7 +57,7 @@ void timer(hls::stream<ap_axiu<1,0,0,0>>& condition, hls::stream<ap_axiu<64,0,0,
     #ifndef FPGA_HW
     volatile uint64_t counter = 0;
     while(true){
-        ap_axiu<1,0,0,0> read;
+        ap_axiu<8,0,0,0> read;
         if(condition.read_nb(read)){
             if(read.data == 0){
                 break;

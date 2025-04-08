@@ -4,11 +4,11 @@
 #include "backtrack.h"
 #include "copy_in.h"
 
-void sendTime(hls::stream<ap_axiu<64,0,0,0>>& timerValueStream, hls::stream<ap_axiu<1,0,0,0>>& conditionStream, 
+void sendTime(hls::stream<ap_axiu<64,0,0,0>>& timerValueStream, hls::stream<ap_axiu<8,0,0,0>>& conditionStream, 
     const unsigned int code, volatile uint64_t* store){
     #pragma HLS inline off
     IO_WAIT:{
-        ap_axiu<1,0,0,0> pktTimer;
+        ap_axiu<8,0,0,0> pktTimer;
         ap_axiu<64,0,0,0> value;
 
         pktTimer.data = code;
@@ -92,8 +92,8 @@ void solver(clsStatePCIE* clsStates, ap_int<512>* litStore, lit* answerStack,
     hls::stream<ap_axiu<96,0,0,0>>& clauseStoreInputStream1, hls::stream<ap_axiu<96,0,0,0>>& clauseStoreInputStream2,
     hls::stream<ap_axiu<32,0,0,0>>& clauseStoreOutputStream1, hls::stream<ap_axiu<32,0,0,0>>& clauseStoreOutputStream2,
      hls::stream<ap_axiu<32,0,0,0>>& locationOutputStream,
-    hls::stream<ap_axiu<32,0,0,0>>& restartValueStream, hls::stream<ap_axiu<1,0,0,0>>& stopStream,
-    hls::stream<ap_axiu<64,0,0,0>>& timerValueStream, hls::stream<ap_axiu<1,0,0,0>>& conditionStream,
+    hls::stream<ap_axiu<32,0,0,0>>& restartValueStream, hls::stream<ap_axiu<8,0,0,0>>& stopStream,
+    hls::stream<ap_axiu<64,0,0,0>>& timerValueStream, hls::stream<ap_axiu<8,0,0,0>>& conditionStream,
     hls::stream<ap_axiu<96,0,0,0>>& messageStream){
 
     #pragma HLS INTERFACE m_axi port=clsStates offset=slave bundle=gmem5 latency=40
@@ -300,7 +300,7 @@ void solver(clsStatePCIE* clsStates, ap_int<512>* litStore, lit* answerStack,
 
                 copyStats(learnedStats, longestClause, litStoreAccessStats, cycleCounter, miscCounters);
 
-                ap_axiu<1,0,0,0> pkt;
+                ap_axiu<8,0,0,0> pkt;
                 pkt.data = 1;
                 stopStream.write(pkt);
 
@@ -344,7 +344,7 @@ void solver(clsStatePCIE* clsStates, ap_int<512>* litStore, lit* answerStack,
                     answerStack[i] = mAnswerStack[i];
                 }
 
-                ap_axiu<1,0,0,0> pkt;
+                ap_axiu<8,0,0,0> pkt;
                 pkt.data = 1;
                 stopStream.write(pkt);
 
@@ -421,7 +421,7 @@ void solver(clsStatePCIE* clsStates, ap_int<512>* litStore, lit* answerStack,
                 messageValue.data.range(31,0) = error;
                 messageStream.write(messageValue);
 
-                ap_axiu<1,0,0,0> pkt;
+                ap_axiu<8,0,0,0> pkt;
                 pkt.data = 1;
                 stopStream.write(pkt);
 

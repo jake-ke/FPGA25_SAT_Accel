@@ -64,6 +64,6 @@ extern int overhead;
 extern int splitResidualCnt;
 extern unsigned int checkCnt;
 
-void sendTime(hls::stream<ap_axiu<64,0,0,0>>& timerValueStream, hls::stream<ap_axiu<1,0,0,0>>& conditionStream, 
+void sendTime(hls::stream<ap_axiu<64,0,0,0>>& timerValueStream, hls::stream<ap_axiu<8,0,0,0>>& conditionStream, 
     const unsigned int code, volatile uint64_t* store);
 #endif
