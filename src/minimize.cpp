@@ -14,6 +14,7 @@ void minimize_dispatch(hls::stream<lit>& toMinimizeStream,
 
         lit getLit = toMinimizeStream.read();
         DISPATCH: while(true){
+	    #pragma HLS pipeline II=1
             #pragma HLS loop_tripcount min=32 max=32
 
             if(splitMinimizeStream[select].write_nb(getLit)){

@@ -414,13 +414,13 @@ bool solve(std::string xclBinFile, std::string inputFilePath, std::string output
 		}
 		std::cout << "Trying to program device[" << i << "]: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
         
-		// #ifndef HW_SIM
-		// if (device.getInfo<CL_DEVICE_NAME>() != "xilinx_aws-vu47p-f2_xdma-shell-v04052421_202410_1") {
-		// #else
-		// if (device.getInfo<CL_DEVICE_NAME>() != "xilinx_aws-vu47p-f2_202410_1") {
-		// #endif
-		// 	continue;
-		// }
+		#ifndef HW_SIM
+		if (device.getInfo<CL_DEVICE_NAME>() != "xilinx_u55c_gen3x16_xdma_base_3") {
+		#else
+		if (device.getInfo<CL_DEVICE_NAME>() != "xilinx_u55c_gen3x16_xdma_3_202210_1") {
+		#endif
+			continue;
+		}
 
 		cl::Program program(context, { device }, bins, NULL, &err);
 	

@@ -274,7 +274,7 @@ void findNextCls(hls::stream<cls>& nextClauseReg, hls::stream<bool>& stopSignal,
 
     FIND_NEXT_CLS: for(int i = trailEndIndex; i >= 0; i--){
         #pragma HLS loop_tripcount min=16 max=16
-        #pragma HLS pipeline 
+        #pragma HLS pipeline II=1
 
         #ifdef FPGA_HW
         bool stop;

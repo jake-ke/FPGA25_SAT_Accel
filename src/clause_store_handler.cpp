@@ -143,6 +143,7 @@ void sendLoop(const ap_uint<128> mClsStore[_FPGA_MAX_LITERAL_ELEMENTS/4], const 
     reqAddrLit = cmd.addressStart;
 
     SEND_DATA_2: while(true){
+	#pragma HLS pipeline II=1
         if(state == 0){
             ap_uint<128> get = mClsStore[reqAddrLit/4];
             tmpAddr = get.range(127,96);
@@ -357,6 +358,7 @@ void deleteClauses(mmuStream<cls, _FPGA_MAX_CLAUSES>& freeClsID, mmuStream<unsig
     ap_uint<128> get = 0;
     SEND_DATA_DELETE_NO_WRAP: while(true){
         #pragma HLS loop_tripcount min=16 max=16
+	#pragma HLS pipeline II=1
 
         if(state == 0){
             if(subIndex == 0){

@@ -75,6 +75,7 @@ void discover(hls::stream<colorAssignment>& toCommitStream, hls::stream<bcpPacke
         #pragma HLS loop_tripcount min=1024 max=1024
         #pragma HLS dependence variable=lmd inter true distance=DEPENDENCY
         #pragma HLS dependence variable=lmmd inter true distance=DEPENDENCY
+	#pragma HLS pipeline II=1
 
         if(get.literalUnitted == 0){
             break;

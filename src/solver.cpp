@@ -238,7 +238,8 @@ void solver(clsStatePCIE* clsStates, ap_int<512>* litStore, lit* answerStack,
                 LMD_IS_IN_STACK(getLmd.compactlmd) = true;
                 
                 FIND_TOP: while(true){
-                    #pragma HLS loop_tripcount min=16 max=16
+                    #pragma HLS pipeline II=2
+		    #pragma HLS loop_tripcount min=16 max=16
                     if(!LMD_IS_IN_STACK(getLmd.compactlmd)){
                         break;
                     }
