@@ -601,7 +601,9 @@ bool solve(std::string xclBinFile, std::string inputFilePath, std::string output
                 std::cout << ((volatile int*)hostMemDebug)[1] << " " << ((volatile int*)hostMemDebug)[2] 
                     << " " << ((volatile int*)hostMemDebug)[3] << " " << ((volatile int*)hostMemDebug)[4] 
                     << " " << ((volatile int*)hostMemDebug)[5] << " " << ((volatile int*)hostMemDebug)[6]
-                    << " " << ((volatile int*)hostMemDebug)[7] << "\n\n";
+                    << " " << ((volatile int*)hostMemDebug)[7] 
+                    << " " << ((volatile int*)hostMemDebug)[8] << " " << ((volatile int*)hostMemDebug)[9] 
+                    << " " << ((volatile int*)hostMemDebug)[10] << " " << ((volatile int*)hostMemDebug)[11] << "\n\n";
             
             }
         }
