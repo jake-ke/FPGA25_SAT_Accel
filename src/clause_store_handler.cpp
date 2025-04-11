@@ -547,7 +547,7 @@ void clause_store_handler(ap_uint<128>* clauseStore, ap_uint<128>* clauseStore2,
     #pragma HLS bind_storage variable=freeClsPageAddresses.array type=RAM_S2P impl=URAM latency=1
 
     mmuStream<cls, _FPGA_MAX_CLAUSES> freeClsID(ORIGINAL_CLS_CNT,_FPGA_MAX_CLAUSES,1);
-    #pragma HLS bind_storage variable=freeClsID.array type=RAM_S2P impl=URAM latency=2
+    #pragma HLS bind_storage variable=freeClsID.array type=RAM_S2P impl=URAM latency=1
 
     // ap_uint<128> mClsStore[_FPGA_MAX_LITERAL_ELEMENTS/4];
     // #pragma HLS bind_storage variable=mClsStore type=RAM_T2P impl=URAM latency=2

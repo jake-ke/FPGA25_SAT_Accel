@@ -235,7 +235,7 @@ void undo_states_and_minimize_task_parallel_wrapper(hls::stream<ap_axiu<32,0,0,0
         LITERAL_PAGE_SIZE, POSITIVE_LIT_PHASE_VAL, litStoreAccessStats);
 
     hls::stream<lit> splitMinimizeStream[2];
-    #pragma HLS stream variable=splitMinimizeStream depth=2
+    #pragma HLS stream variable=splitMinimizeStream depth=1024
     #pragma HLS array_partition variable=splitMinimizeStream dim=0 complete
 
     minimize_dispatch(toMinimizeStream,
@@ -276,13 +276,13 @@ void findNextCls(hls::stream<cls>& nextClauseReg, hls::stream<bool>& stopSignal,
         #pragma HLS loop_tripcount min=16 max=16
         #pragma HLS pipeline 
 
-        #ifdef FPGA_HW
+        /*#ifdef FPGA_HW
         bool stop;
         if(stopSignal.read_nb(stop)){
             didRead = true;
             break;
         }
-        #endif
+        #endif*/
 
         lit trailLit = reg(answerStack[i]);
         literalMinimizeMetaData getLmmd = reg(lmmd[0][abs(trailLit)-1]);
@@ -295,16 +295,16 @@ void findNextCls(hls::stream<cls>& nextClauseReg, hls::stream<bool>& stopSignal,
         ap_uint<512> getBit = validBit[validBitAddrIndex];      
 
         if(getBit.range(validBitAddrSubIndex,validBitAddrSubIndex) == 1 && (mergeStatus == 1 || mergeStatus == 2)){
-            if(!once){
+            //if(!once){
                 saveTrailEndIndex = trailEndIndex;
                 once = true;
             
                 nextClauseReg.write(unitByCls[abs(trailLit)-1]);
-            }
+            //}
 
-            #ifndef FPGA_HW
+            //#ifndef FPGA_HW
             break;
-            #endif
+            //#endif
         }
     }
 
@@ -320,14 +320,16 @@ void findNextCls(hls::stream<cls>& nextClauseReg, hls::stream<bool>& stopSignal,
 void findNextClsCompare(hls::stream<cls>& nextClauseReg, hls::stream<bool>& stopSignal, cls& nextClauseMerge){
     #pragma HLS inline off
 
-    IO_INSERT:{
+    //IO_INSERT:{
     nextClauseMerge = nextClauseReg.read();
 
-    ap_wait();
+    //ap_wait();
     #ifdef FPGA_HW
-    stopSignal.write(true);
-    #endif
+    if(nextClauseMerge > 0){
+    	stopSignal.write(true);
     }
+    #endif
+    //}
 
     FLUSH_FIND_NEXT_CLS: while(true){
         #pragma HLS loop_tripcount min=16 max=16
@@ -524,7 +526,8 @@ void learnClause(clsState clsStates[_FPGA_CLS_STATES_PARTITION][_FPGA_MAX_CLAUSE
     hls::stream<ap_axiu<96,0,0,0>>& clauseStoreInputStream1, hls::stream<ap_axiu<96,0,0,0>>& clauseStoreInputStream2,
     hls::stream<ap_axiu<32,0,0,0>>& clauseStoreOutputStream1, hls::stream<ap_axiu<32,0,0,0>>& clauseStoreOutputStream2,
     hls::stream<ap_axiu<32,0,0,0>>& pqHandlerInput, hls::stream<ap_axiu<32,0,0,0>>& pqHandlerValue,
-    hls::stream<ap_axiu<64,0,0,0>>& timerValueStream, hls::stream<ap_axiu<1,0,0,0>>& conditionStream, ap_uint<64>* cycleCounter){
+    hls::stream<ap_axiu<64,0,0,0>>& timerValueStream, hls::stream<ap_axiu<1,0,0,0>>& conditionStream, ap_uint<64>* cycleCounter,
+    hls::stream<ap_axiu<96,0,0,0>>& messageStream){
 
     #pragma HLS inline off
 
@@ -627,6 +630,12 @@ void learnClause(clsState clsStates[_FPGA_CLS_STATES_PARTITION][_FPGA_MAX_CLAUSE
 
     clauseStoreInputStream1.write(sendClauseInputCommand);
 
+    ap_axiu<96,0,0,0> messageValue;
+    messageValue.data.range(95,64) = 6;
+    messageValue.data.range(63,32) = 98;
+    messageValue.data.range(31,0) = 131;
+    messageStream.write(messageValue);
+
     RESOLUTION: while(true){
         #pragma HLS loop_tripcount min=1024 max=1024
 
@@ -671,6 +680,11 @@ void learnClause(clsState clsStates[_FPGA_CLS_STATES_PARTITION][_FPGA_MAX_CLAUSE
             streamSize--;
         }
     }
+
+	messageValue.data.range(95,64) = 6;
+            messageValue.data.range(63,32) = 99+numElements;
+            messageValue.data.range(31,0) = 131;
+            messageStream.write(messageValue);
 
     sendPQHandler.data = pq::EXIT;
     pqHandlerInput.write(sendPQHandler);
@@ -773,6 +787,26 @@ void learnClause(clsState clsStates[_FPGA_CLS_STATES_PARTITION][_FPGA_MAX_CLAUSE
     unsigned int overheadClear[_FPGA_PARALLEL_MINIMIZE] = {0,0};
     #pragma HLS array_partition variable=overheadClear dim=0 complete
 
+    messageValue.data.range(95,64) = 8;
+    messageValue.data.range(63,32) = literalCommit;
+    messageValue.data.range(31,0) = 133;
+    messageStream.write(messageValue);
+
+    messageValue.data.range(95,64) = 9;
+    messageValue.data.range(63,32) = backtrackHeight;
+    messageValue.data.range(31,0) = 133;
+    messageStream.write(messageValue);
+
+    messageValue.data.range(95,64) = 10;
+    messageValue.data.range(63,32) = answerStackHeight;
+    messageValue.data.range(31,0) = 133;
+    messageStream.write(messageValue);
+
+    messageValue.data.range(95,64) = 11;
+    messageValue.data.range(63,32) = foundAbsolute;
+    messageValue.data.range(31,0) = 133;
+    messageStream.write(messageValue);
+
     undo_states_and_minimize_task_parallel_wrapper(pqHandlerInput, toMinimizeStream,
         clsStates,
         lmmd, lmd, validBitMinimize, mergeScratchPadMinimize,
@@ -791,6 +825,11 @@ void learnClause(clsState clsStates[_FPGA_CLS_STATES_PARTITION][_FPGA_MAX_CLAUSE
         learnedStats[3] += minimizeStats[k][1];
     }
 
+    messageValue.data.range(95,64) = 6;
+            messageValue.data.range(63,32) = overhead;
+            messageValue.data.range(31,0) = 134;
+            messageStream.write(messageValue);
+
     sendClauseInputCommand.data.range(31,0) = 0;
     sendClauseInputCommand.data.range(63,32) = 0;
     sendClauseInputCommand.data.range(95,64) = csh::EXIT;
@@ -799,11 +838,21 @@ void learnClause(clsState clsStates[_FPGA_CLS_STATES_PARTITION][_FPGA_MAX_CLAUSE
     clauseStoreInputStream2.write(sendClauseInputCommand);
     
 
+	messageValue.data.range(95,64) = 6;
+            messageValue.data.range(63,32) = overhead+1;
+            messageValue.data.range(31,0) = 135;
+            messageStream.write(messageValue);
+
     sendPQHandler.data = pq::EXIT;
     pqHandlerInput.write(sendPQHandler);
     
     sendTime(timerValueStream, conditionStream, 1, &store[1]);
     cycleCounter[4] += store[1]-store[0];
+
+	messageValue.data.range(95,64) = 6;
+            messageValue.data.range(63,32) = overhead+2;
+            messageValue.data.range(31,0) = 136;
+            messageStream.write(messageValue);
 
     unsigned int removeCount = 0;
     lit possibleFixedLiteral = 0;
@@ -816,6 +865,12 @@ void learnClause(clsState clsStates[_FPGA_CLS_STATES_PARTITION][_FPGA_MAX_CLAUSE
     hls::stream<lit> litNewPage;
     #pragma HLS stream variable=litNewPage depth=_FPGA_MAX_LEARN_ELE
 
+
+	messageValue.data.range(95,64) = 6;
+            messageValue.data.range(63,32) = overhead+3;
+            messageValue.data.range(31,0) = 137;
+            messageStream.write(messageValue);
+
     clsState newClauseState;
 
     if(foundAbsolute){
@@ -824,8 +879,14 @@ void learnClause(clsState clsStates[_FPGA_CLS_STATES_PARTITION][_FPGA_MAX_CLAUSE
         newClauseState.compressedList = 0;
         newClauseState.remainingUnassigned = 0;
 
+	messageValue.data.range(95,64) = 6;
+            messageValue.data.range(63,32) = nonRemovableCount;
+            messageValue.data.range(31,0) = 138;
+            messageStream.write(messageValue);
+
         ap_axiu<96,0,0,0> sendClauseInputCommand;
         sendClauseInputCommand.data.range(31,0) = nonRemovableCount;
+    	sendClauseInputCommand.data.range(63,32) = 0;
         sendClauseInputCommand.data.range(95,64) = csh::SAVE;
 
         CHECK_CLS_SPACE:{
@@ -833,8 +894,13 @@ void learnClause(clsState clsStates[_FPGA_CLS_STATES_PARTITION][_FPGA_MAX_CLAUSE
             clauseStoreInputStream1.write(sendClauseInputCommand);
 
             ap_wait();
-
             error = clauseStoreOutputStream1.read().data;
+	
+            messageValue.data.range(95,64) = 7;
+            messageValue.data.range(63,32) = error;
+            messageValue.data.range(31,0) = 139;
+            messageStream.write(messageValue);
+
             if(error == -4){
                 return;
             }else{
@@ -848,6 +914,12 @@ void learnClause(clsState clsStates[_FPGA_CLS_STATES_PARTITION][_FPGA_MAX_CLAUSE
             numElements, givenClsID,
             levelBefore, LITERAL_PAGE_SIZE, clauseStoreInputStream1);
         newClauseState.remainingUnassigned = nonRemovableCount;
+
+
+	messageValue.data.range(95,64) = 6;
+            messageValue.data.range(63,32) = givenClsID;
+            messageValue.data.range(31,0) = 140;
+            messageStream.write(messageValue);
 
         if(didSimplify[0] || didSimplify[1]){
             if(longestClause[1] < nonRemovableCount){
@@ -864,15 +936,35 @@ void learnClause(clsState clsStates[_FPGA_CLS_STATES_PARTITION][_FPGA_MAX_CLAUSE
             newClauseState.compressedList = insertPropagate[1];
         }
 
+        messageValue.data.range(95,64) = 6;
+            messageValue.data.range(63,32) = givenClsID;
+            messageValue.data.range(31,0) = 141;
+            messageStream.write(messageValue);
+
         clsStates[givenClsID%_FPGA_CLS_STATES_PARTITION][givenClsID/_FPGA_CLS_STATES_PARTITION] = newClauseState;
     }
+
+    messageValue.data.range(95,64) = 6;
+            messageValue.data.range(63,32) = givenClsID;
+            messageValue.data.range(31,0) = 142;
+            messageStream.write(messageValue);
 
     sendTime(timerValueStream, conditionStream, 1, &store[1]);
     cycleCounter[5] += store[1]-store[0];
 
     sendTime(timerValueStream, conditionStream, 1, &store[0]);
 
+    messageValue.data.range(95,64) = 6;
+            messageValue.data.range(63,32) = cycleCounter[5];
+            messageValue.data.range(31,0) = 143;
+            messageStream.write(messageValue);
+
     if(!litNewPage.empty()){
+        messageValue.data.range(95,64) = 6;
+        messageValue.data.range(63,32) = error;
+        messageValue.data.range(31,0) = 144;
+        messageStream.write(messageValue);
+
         allocatePage(litNewPage, freeLitPageAddresses, lmd, 
             litStore, error,
             LITERAL_PAGE_SIZE);
@@ -880,5 +972,10 @@ void learnClause(clsState clsStates[_FPGA_CLS_STATES_PARTITION][_FPGA_MAX_CLAUSE
 
     sendTime(timerValueStream, conditionStream, 1, &store[1]);
     cycleCounter[6] += store[1]-store[0];
+
+    messageValue.data.range(95,64) = 6;
+    messageValue.data.range(63,32) = cycleCounter[6];
+    messageValue.data.range(31,0) = 142;
+    messageStream.write(messageValue);
 }
 

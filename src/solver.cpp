@@ -144,7 +144,7 @@ void solver(clsStatePCIE* clsStates, ap_int<512>* litStore, lit* answerStack,
     #pragma HLS array_partition variable=mlmmd dim=1 complete
 
     mmuStream<unsigned int, _MAX_PAGES_LIT_STORE_> freeLitPageAddresses(literalElements,_FPGA_MAX_LITERAL_ELEMENTS,LITERAL_PAGE_SIZE);
-    #pragma HLS bind_storage variable=freeLitPageAddresses.array type=RAM_S2P impl=URAM
+    #pragma HLS bind_storage variable=freeLitPageAddresses.array type=RAM_S2P impl=URAM latency=1
 
     lit literalCommit;
 
@@ -403,7 +403,7 @@ void solver(clsStatePCIE* clsStates, ap_int<512>* litStore, lit* answerStack,
                 NUM_LITERALS, MAX_LITERAL_ELEMENTS, LITERAL_PAGE_SIZE,
                 learnedStats, litStoreAccessStats, longestClause, error,
                 clauseStoreInputStream1, clauseStoreInputStream2, clauseStoreOutputStream1, clauseStoreOutputStream2, 
-                pqHandlerInput, pqHandlerValue, timerValueStream, conditionStream, cycleCounter);
+                pqHandlerInput, pqHandlerValue, timerValueStream, conditionStream, cycleCounter, messageStream);
             
 
             if(error < 0){

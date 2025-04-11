@@ -12,8 +12,9 @@ void minimize_dispatch(hls::stream<lit>& toMinimizeStream,
         ap_uint<1> select = 0;
         unsigned int idx = 0;
 
-        lit getLit = toMinimizeStream.read();
+        /*lit getLit = toMinimizeStream.read();
         DISPATCH: while(true){
+	        #pragma HLS pipeline II=1
             #pragma HLS loop_tripcount min=32 max=32
 
             if(splitMinimizeStream[select].write_nb(getLit)){
@@ -25,6 +26,18 @@ void minimize_dispatch(hls::stream<lit>& toMinimizeStream,
             #ifdef FPGA_HW
             select++;
             #endif
+        }*/
+
+        
+        DISPATCH: while(true){
+	        #pragma HLS pipeline off
+            #pragma HLS loop_tripcount min=32 max=32
+
+            lit getLit = toMinimizeStream.read();
+            splitMinimizeStream[0].write(getLit);
+            if(toMinimizeStream.empty()){
+                break;
+            }
         }
     }
     splitMinimizeStream[0].write(0);
