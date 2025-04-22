@@ -404,7 +404,7 @@ void solver(clsStatePCIE* clsStates, ap_int<512>* litStore, lit* answerStack,
                 NUM_LITERALS, MAX_LITERAL_ELEMENTS, LITERAL_PAGE_SIZE,
                 learnedStats, litStoreAccessStats, longestClause, error,
                 clauseStoreInputStream1, clauseStoreInputStream2, clauseStoreOutputStream1, clauseStoreOutputStream2, 
-                pqHandlerInput, pqHandlerValue, timerValueStream, conditionStream, cycleCounter, messageStream);
+                pqHandlerInput, pqHandlerValue, timerValueStream, conditionStream, cycleCounter);
             
 
             if(error < 0){
