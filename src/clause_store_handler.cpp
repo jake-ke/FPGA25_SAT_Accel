@@ -526,7 +526,7 @@ void clause_store_handler(ap_uint<128>* clauseStore, clauseMetaData* cmd,
     #pragma HLS bind_storage variable=freeClsPageAddresses.array type=RAM_S2P impl=URAM latency=1
 
     mmuStream<cls, _FPGA_MAX_CLAUSES> freeClsID(ORIGINAL_CLS_CNT,_FPGA_MAX_CLAUSES,1);
-    #pragma HLS bind_storage variable=freeClsID.array type=RAM_S2P impl=URAM latency=2
+    #pragma HLS bind_storage variable=freeClsID.array type=RAM_S2P impl=URAM latency=1
 
     ap_uint<128> mClsStore[_FPGA_MAX_LITERAL_ELEMENTS/4];
     #pragma HLS bind_storage variable=mClsStore type=RAM_T2P impl=URAM latency=2
@@ -568,16 +568,15 @@ void clause_store_handler(ap_uint<128>* clauseStore, clauseMetaData* cmd,
             
         }else if(code == csh::SAVE){
             clauseMetaData cmd;
-            cmd.numElements = getCommand.data.range(31,0);
-
             ap_axiu<32,0,0,0> sendData;
+            cmd.numElements = getCommand.data.range(31,0);
             if((freeClsPageAddresses.size()*(CLAUSE_PAGE_SIZE-1) < cmd.numElements) || freeClsID.empty()){
                 sendData.data = -4;
                 clauseStoreOutputStream1.write(sendData);
             }else{
                 cmd.addressStart = freeClsPageAddresses.read();
-                
                 freeID = freeClsID.read();
+
                 lastInsertedID = freeID;
                 mCmd[freeID] = cmd;
 
@@ -621,6 +620,5 @@ void clause_store_handler(ap_uint<128>* clauseStore, clauseMetaData* cmd,
     ap_axiu<64,0,0,0> updateLitStorePos;
     updateLitStorePos.data = lh::EXIT;
     locationInputStream.write(updateLitStorePos);
-
 }
 }

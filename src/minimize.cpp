@@ -7,7 +7,7 @@ void minimize_dispatch(hls::stream<lit>& toMinimizeStream,
     if(foundAbsolute){
         return;
     }
-    
+
     if(!toMinimizeStream.empty()){
         ap_uint<1> select = 0;
         unsigned int idx = 0;
@@ -34,7 +34,7 @@ void minimize_dispatch(hls::stream<lit>& toMinimizeStream,
 
 void minimize_resolution_sort(hls::stream<lit_resolve>& mrsp2Stream, hls::stream<lit>& fromClsStore, 
     ap_uint<2> mergeScratchPad[_FPGA_MAX_LITERALS], ap_uint<512> validBit[_FPGA_MAX_LITERALS/512],
-    unsigned int& numElements, ap_uint<64>& learnedStats){
+    ap_uint<64>& learnedStats){
     #pragma HLS inline off
 
     const int RESOLVE_DEP = _FPGA_RESOLVE_DEP_DIST;
@@ -43,6 +43,7 @@ void minimize_resolution_sort(hls::stream<lit_resolve>& mrsp2Stream, hls::stream
     #pragma HLS array_partition variable=getBitReg complete
     unsigned int validBitAddrIndexReg[_FPGA_RESOLVE_DEP_DIST];
     #pragma HLS array_partition variable=validBitAddrIndexReg complete
+    int numElements = 0;
 
     for(unsigned int i = 0; i < _FPGA_RESOLVE_DEP_DIST; i++){
         #pragma HLS unroll
@@ -114,10 +115,11 @@ void minimize_resolution_sort(hls::stream<lit_resolve>& mrsp2Stream, hls::stream
 }
 
 void minimize_resolution_sort_part_2(myStream<lit,_FPGA_MAX_LEARN_ELE,_FPGA_MAX_LEARN_ELE_BITS>& nextLiteralMinimize, hls::stream<lit_resolve>& mrsp2Stream, 
-    const literalMinimizeMetaData lmmd[_FPGA_MAX_LITERALS], unsigned int& countMarked, int& exitCondition){
+    const literalMinimizeMetaData lmmd[_FPGA_MAX_LITERALS], unsigned int& countMarked, unsigned int& numElements, int& exitCondition){
     #pragma HLS inline off
 
     bool hitUnmarkDecided = false;
+    unsigned int countMarkedTmp = 0;
     MINIMIZE_SORT_2: while(true){
         #pragma HLS loop_tripcount min=1024 max=1024
         #pragma HLS pipeline II=1
@@ -133,7 +135,7 @@ void minimize_resolution_sort_part_2(myStream<lit,_FPGA_MAX_LEARN_ELE,_FPGA_MAX_
                 bool cmp = LMMD_MIN_KEEP(checkMinimizedLmd.compactlmmd) > 0 || LMMD_IS_IN_FIX_STACK(checkMinimizedLmd.compactlmmd) == 1;
 
                 if(cmp && !hitUnmarkDecided){
-                    countMarked++;
+                    countMarkedTmp++;
                 }
                 if(!cmp && !hitUnmarkDecided){
                     nextLiteralMinimize.array[nextLiteralMinimize.head] = abs(get.literal);
@@ -148,9 +150,11 @@ void minimize_resolution_sort_part_2(myStream<lit,_FPGA_MAX_LEARN_ELE,_FPGA_MAX_
     }
 
     lit_resolve get = mrsp2Stream.read();
+    numElements += get.literal;
+    countMarked += countMarkedTmp;
 
     //get.literal is actually number of elements here
-    if(!hitUnmarkDecided && countMarked == (unsigned int)get.literal){
+    if(!hitUnmarkDecided && countMarked == numElements){
         exitCondition = 1;
     }
     if(hitUnmarkDecided){
@@ -174,66 +178,37 @@ void minimize_dataflow_wrapper_layer_2(myStream<lit,_FPGA_MAX_LEARN_ELE,_FPGA_MA
 
     clause_store_prefetch(prefetchClsStore, clauseStoreOutputStream);
     minimize_resolution_sort(mrsp2Stream, prefetchClsStore, 
-        mergeScratchPad, validBit, numElements, learnedStats);
+        mergeScratchPad, validBit, learnedStats);
     minimize_resolution_sort_part_2(nextLiteralMinimize, mrsp2Stream, 
-        lmmd, countMarked, exitCondition);
+        lmmd, countMarked, numElements, exitCondition);
 }
 
-void minimize_dataflow_wrapper_layer_1(hls::stream<lit>& toSplitStream,
-    literalMinimizeMetaData lmmd[_FPGA_MAX_LITERALS], 
+void tmpTask(literalMinimizeMetaData lmmd[_FPGA_MAX_LITERALS], 
     ap_uint<512> validBitMinimize[_FPGA_MAX_LITERALS/512],
     ap_uint<2> mergeScratchPadMinimize[_FPGA_MAX_LITERALS],
     unsigned int& nonRemovableCount, bool& didSimplify, 
-    const cls unitByCls[_FPGA_MAX_LITERALS], const bool foundAbsolute,
+    const cls unitByCls[_FPGA_MAX_LITERALS], const lit getLit,
     const unsigned int clearIterations, ap_uint<64> minimizeStats[2], unsigned int& overheadClear,  
     hls::stream<ap_axiu<96,0,0,0>>& clauseStoreInputStream, hls::stream<ap_axiu<32,0,0,0>>& clauseStoreOutputStream){
     #pragma HLS inline off
 
-    if(foundAbsolute){
-        return;
-    }
-    
-    bool doCompute = false;
-
-    lit getLit;
     literalMinimizeMetaData getLmmd;
 
-    unsigned int minimizeElements;
-    unsigned int countMarked;
+    unsigned int minimizeElements = 0;
+    unsigned int countMarked = 0;
 
     myStream<lit,_FPGA_MAX_LEARN_ELE,_FPGA_MAX_LEARN_ELE_BITS> nextLiteralMinimize;
     cls nextClauseMergeMinimize;
     ap_axiu<96,0,0,0> sendClauseInputCommand;
 
-    MINIZE: while(true){
+    nextLiteralMinimize.head = 0;
+    nextLiteralMinimize.tail = 0;
+
+    getLmmd = lmmd[abs(getLit)-1];
+    nextClauseMergeMinimize = unitByCls[abs(getLit)-1];
+
+    MINIMIZE_CHAIN: while(true){
         #pragma HLS loop_tripcount min=32 max=32
-
-        if(!doCompute){
-            nextLiteralMinimize.head = 0;
-            nextLiteralMinimize.tail = 0;
-
-            minimizeElements = 0;
-            countMarked = 0;
-
-            getLit = toSplitStream.read();
-
-            if(getLit == 0){
-                break;
-            }
-
-            getLmmd = lmmd[abs(getLit)-1];
-            nextClauseMergeMinimize = unitByCls[abs(getLit)-1];
-            if(LMMD_IS_DECIDE(getLmmd.compactlmmd) == 1 && LMMD_IS_IN_FIX_STACK(getLmmd.compactlmmd) == 0){
-                nonRemovableCount++;
-            }
-
-            if(!(LMMD_IS_IN_FIX_STACK(getLmmd.compactlmmd) == 1 || LMMD_IS_DECIDE(getLmmd.compactlmmd) == 1)){
-                doCompute = true;
-            }else{
-                continue;
-            }   
-        }
-
         int exitCondition = 0;
         minimizeStats[0]++;
 
@@ -241,7 +216,7 @@ void minimize_dataflow_wrapper_layer_1(hls::stream<lit>& toSplitStream,
         sendClauseInputCommand.data.range(63,32) = 0;
         sendClauseInputCommand.data.range(95,64) = csh::SEND_CLS;    
         clauseStoreInputStream.write(sendClauseInputCommand);
-        
+
         minimize_dataflow_wrapper_layer_2(nextLiteralMinimize,
             mergeScratchPadMinimize, validBitMinimize, lmmd,
             minimizeElements, countMarked, exitCondition, 
@@ -260,10 +235,8 @@ void minimize_dataflow_wrapper_layer_1(hls::stream<lit>& toSplitStream,
 
             lmmd[abs(getLit)-1] = getLmmd;
                             
-            doCompute = false;
             needClear = true;
         }else if(exitCondition == 2){
-            doCompute = false;
             needClear = true;
             nonRemovableCount++;
         }
@@ -276,7 +249,43 @@ void minimize_dataflow_wrapper_layer_1(hls::stream<lit>& toSplitStream,
             }
             
             overheadClear += clearIterations;
+            break;
         } 
-    
+
+    }
+}
+
+void minimize_dataflow_wrapper_layer_1(hls::stream<lit>& toSplitStream,
+    literalMinimizeMetaData lmmd[_FPGA_MAX_LITERALS], 
+    ap_uint<512> validBitMinimize[_FPGA_MAX_LITERALS/512],
+    ap_uint<2> mergeScratchPadMinimize[_FPGA_MAX_LITERALS],
+    unsigned int& nonRemovableCount, bool& didSimplify, 
+    const cls unitByCls[_FPGA_MAX_LITERALS], const bool foundAbsolute,
+    const unsigned int clearIterations, ap_uint<64> minimizeStats[2], unsigned int& overheadClear,  
+    hls::stream<ap_axiu<96,0,0,0>>& clauseStoreInputStream, hls::stream<ap_axiu<32,0,0,0>>& clauseStoreOutputStream){
+    #pragma HLS inline off
+
+    if(foundAbsolute){
+        return;
+    }
+
+    lit getLit;
+
+    MINIZE: while(true){
+        #pragma HLS loop_tripcount min=32 max=32
+
+        getLit = toSplitStream.read();
+
+        if(getLit == 0){
+            break;
+        }
+        
+        tmpTask(lmmd, 
+            validBitMinimize,
+            mergeScratchPadMinimize,
+            nonRemovableCount, didSimplify, 
+            unitByCls, getLit,
+            clearIterations, minimizeStats, overheadClear,  
+            clauseStoreInputStream, clauseStoreOutputStream);
     }
 }

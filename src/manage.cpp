@@ -7,21 +7,23 @@ void allocatePage(hls::stream<lit>& litNewPage, mmuStream<unsigned int, _MAX_PAG
     #pragma HLS inline off
     ALLOCATE_PAGE: while(true){
         #pragma HLS loop_tripcount min=32 max=32
+        #pragma HLS pipeline II=1
         #pragma HLS dependence variable=lmd inter false
         #pragma HLS dependence variable=litStore inter false
 
-        if(litNewPage.empty()){
+        /*if(litNewPage.empty()){
             break;
         }
-        lit getLit = litNewPage.read();
+        lit getLit = litNewPage.read();*/
+        lit getLit;
+        if(!litNewPage.read_nb(getLit) || freeLitPageAddresses.empty()){
+            break;
+        }
         ap_uint<1> select = 0;
         if(getLit < 0){
             select = 1;
         }
-        if(freeLitPageAddresses.empty()){
-            error = -5;
-            break;
-        }
+        
         unsigned int freePageAddress = freeLitPageAddresses.read();
 
         literalMetaData getLmd = lmd[abs(getLit)-1];
@@ -40,6 +42,9 @@ void allocatePage(hls::stream<lit>& litNewPage, mmuStream<unsigned int, _MAX_PAG
         litStore[freePageAddress/16 + LITERAL_PAGE_SIZE/16 - 1] = clearLastSubPage;
 
         lmd[abs(getLit)-1] = getLmd;
+    }
+    if(freeLitPageAddresses.empty()){
+        error = -5;
     }
 }
 
