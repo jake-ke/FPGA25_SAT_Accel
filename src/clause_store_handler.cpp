@@ -667,6 +667,5 @@ void clause_store_handler(ap_uint<128>* clauseStore, ap_uint<128>* clauseStore2,
     ap_axiu<64,0,0,0> updateLitStorePos;
     updateLitStorePos.data = lh::EXIT;
     locationInputStream.write(updateLitStorePos);
-
 }
 }

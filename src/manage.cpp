@@ -7,9 +7,9 @@ void allocatePage(hls::stream<lit>& litNewPage, mmuStream<unsigned int, _MAX_PAG
     #pragma HLS inline off
     ALLOCATE_PAGE: while(true){
         #pragma HLS loop_tripcount min=32 max=32
-        #pragma HLS pipeline off
-        //#pragma HLS dependence variable=lmd inter false
-        //#pragma HLS dependence variable=litStore inter false
+        #pragma HLS pipeline II=1
+        #pragma HLS dependence variable=lmd inter false
+        #pragma HLS dependence variable=litStore inter false
 
         /*if(litNewPage.empty()){
             break;

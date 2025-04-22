@@ -16,10 +16,10 @@ void minimize_dispatch(hls::stream<lit>& toMinimizeStream,
 
 void minimize_resolution_sort(hls::stream<lit_resolve>& mrsp2Stream, hls::stream<lit>& fromClsStore, 
     ap_uint<2> mergeScratchPad[_FPGA_MAX_LITERALS], ap_uint<512> validBit[_FPGA_MAX_LITERALS/512],
-    unsigned int& numElements, ap_uint<64>& learnedStats);
+    ap_uint<64>& learnedStats);
 
 void minimize_resolution_sort_part_2(myStream<lit,_FPGA_MAX_LEARN_ELE,_FPGA_MAX_LEARN_ELE_BITS>& nextLiteralMinimize, hls::stream<lit_resolve>& mrsp2Stream, 
-    const literalMinimizeMetaData lmmd[_FPGA_MAX_LITERALS], unsigned int& countMarked, int& exitCondition);
+    const literalMinimizeMetaData lmmd[_FPGA_MAX_LITERALS], unsigned int& countMarked, unsigned int& numElements, int& exitCondition);
 
 void minimize_dataflow_wrapper_layer_2(myStream<lit,_FPGA_MAX_LEARN_ELE,_FPGA_MAX_LEARN_ELE_BITS>& nextLiteralMinimize,
     ap_uint<2> mergeScratchPad[_FPGA_MAX_LITERALS], ap_uint<512> validBit[_FPGA_MAX_LITERALS/512],
