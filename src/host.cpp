@@ -492,8 +492,10 @@ bool solve(std::string xclBinFile, std::string inputFilePath, std::string output
     memset(hostMemDebug,0,sizeof(int)*8192);
 
     cl::Buffer clsStoreBuffer;
+    cl::Buffer clsStoreBuffer2;  // Adding a second buffer for simultaneous reads
     cl::Buffer usedClsIDBucketsBuffer;
     cl::Buffer cmdBuffer;
+    cl::Buffer cmdBuffer2;
     cl::Buffer litStoreBuffer;
     cl::Buffer lbdBucketBuffer;
     cl::Buffer trackLBDCountBuffer;
@@ -505,10 +507,12 @@ bool solve(std::string xclBinFile, std::string inputFilePath, std::string output
     unsigned int trackLBDCount[2*_FPGA_MAX_LBD_BUCKETS];
 
     OCL_CHECK(err, clsStoreBuffer = cl::Buffer(context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, _HOST_MAX_CLAUSE_ELEMENTS * sizeof(cls), pd.clauseStore, &err));
+    OCL_CHECK(err, clsStoreBuffer2 = cl::Buffer(context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, _HOST_MAX_CLAUSE_ELEMENTS * sizeof(cls), pd.clauseStore, &err));  // Same memory as clsStoreBuffer
     OCL_CHECK(err, usedClsIDBucketsBuffer = cl::Buffer(context, CL_MEM_HOST_NO_ACCESS | CL_MEM_READ_WRITE, _FPGA_MAX_LBD_BUCKETS*_FPGA_MAX_CLAUSES*sizeof(unsigned int), nullptr, &err));
     OCL_CHECK(err, trackLBDCountBuffer = cl::Buffer(context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, _FPGA_MAX_LBD_BUCKETS*2*sizeof(unsigned int), trackLBDCount, &err));
    
     OCL_CHECK(err, cmdBuffer = cl::Buffer(context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, _FPGA_MAX_CLAUSES * sizeof(clauseMetaData), pd.cmd, &err));
+    OCL_CHECK(err, cmdBuffer2 = cl::Buffer(context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, _FPGA_MAX_CLAUSES * sizeof(clauseMetaData), pd.cmd, &err));
     OCL_CHECK(err, litStoreBuffer = 
         cl::Buffer(context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_WRITE, _HOST_MAX_LITERAL_ELEMENTS*sizeof(lit), pd.litStore, &err));   
     
@@ -519,7 +523,9 @@ bool solve(std::string xclBinFile, std::string inputFilePath, std::string output
 
     argN=0;
     OCL_CHECK(err, err = clsStoreKernel.setArg(argN++, clsStoreBuffer));
+    OCL_CHECK(err, err = clsStoreKernel.setArg(argN++, clsStoreBuffer2));  // Add second buffer as argument
     OCL_CHECK(err, err = clsStoreKernel.setArg(argN++, cmdBuffer));
+    OCL_CHECK(err, err = clsStoreKernel.setArg(argN++, cmdBuffer2));
     OCL_CHECK(err, err = clsStoreKernel.setArg(argN++, usedClsIDBucketsBuffer));
     OCL_CHECK(err, err = clsStoreKernel.setArg(argN++, trackLBDCountBuffer));
     OCL_CHECK(err, err = clsStoreKernel.setArg(argN++, pd.md.clauseElements));
@@ -576,7 +582,7 @@ bool solve(std::string xclBinFile, std::string inputFilePath, std::string output
             if(std::chrono::duration_cast<std::chrono::seconds>(time_span).count() > 30){
                 if((unsigned int)((volatile int*)hostMemDebug)[1] == iterationNumber){
                     stuckCount++;
-                    if(stuckCount == 60){
+                    if(stuckCount == 120){
                         std::cout << "Cosim seems to have been stuck somewhere. Exiting" << "\n";
                         exit(EXIT_FAILURE);
                     }
