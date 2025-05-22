@@ -4,8 +4,6 @@
 #include "data_structures.h"
 
 // Debug macros to easily enable/disable debug prints
-#define DEBUG_CSH 1   // Clause store handler operations
-
 #if DEBUG_CSH
 #define CSH_PRINT(fmt, ...) printf("[CSH] " fmt "\n", ##__VA_ARGS__)
 #else
@@ -220,6 +218,7 @@ void sendData_dataflow(const ap_uint<128> mClsStore[_FPGA_MAX_LITERAL_ELEMENTS/4
 }
 
 void saveData(ap_uint<128> mClsStore[_FPGA_MAX_LITERAL_ELEMENTS/4],
+    ap_uint<128> mClsStore2[_FPGA_MAX_LITERAL_ELEMENTS/4],
     mmuStream<unsigned int, _MAX_PAGES_CLS_STORE_>& freeClsPageAddresses,
     const clauseMetaData cmd, const unsigned int CLAUSE_PAGE_SIZE, hls::stream<ap_axiu<96,0,0,0>>& clauseStoreInputStream1,
     hls::stream<ap_axiu<64,0,0,0>>& locationInputStream){
@@ -237,7 +236,7 @@ void saveData(ap_uint<128> mClsStore[_FPGA_MAX_LITERAL_ELEMENTS/4],
 
     for(unsigned int i = 0; i < cmd.numElements; i++){
         ap_axiu<96,0,0,0> getData = clauseStoreInputStream1.read();
-        printf("saveData: i=%u, Read data: %u\n", i, (unsigned int)getData.data.range(31,0));
+        CSH_PRINT("saveData: i=%u, Read data: %u\n", i, (unsigned int)getData.data.range(31,0));
 
         get.range(32*(reqAddrOffsetCls%4)+31,32*(reqAddrOffsetCls%4)) = getData.data.range(31,0);
 
@@ -256,7 +255,7 @@ void saveData(ap_uint<128> mClsStore[_FPGA_MAX_LITERAL_ELEMENTS/4],
         if(reqAddrOffsetCls == CLAUSE_PAGE_SIZE-1){
             if(i != cmd.numElements){
                 nextAddr = reg(freeClsPageAddresses.read());
-                printf("saveData: Got new page address: %u\n", nextAddr);
+                CSH_PRINT("saveData: Got new page address: %u\n", nextAddr);
                 
                 get.range(127,96) = nextAddr;
                 useNewPage = true;
@@ -265,6 +264,7 @@ void saveData(ap_uint<128> mClsStore[_FPGA_MAX_LITERAL_ELEMENTS/4],
         }
 
         mClsStore[tmpAddr/4] = get; 
+        mClsStore2[tmpAddr/4] = get; 
 
         if(reqAddrOffsetCls%4 == 0){
             if(useNewPage){
@@ -498,6 +498,7 @@ void deleteClauses_wrapper(mmuStream<cls, _FPGA_MAX_CLAUSES>& freeClsID,
     #else
     getDeletedClsID(removeIDStream, usedClsIDBuckets, tracker, lastInsertedID, removeTotal, LBDBucketCount);
     for(unsigned int i = 0; i < removeTotal; i++){
+        CSH_PRINT("deleteClauses_wrapper: i = %u", i);
         deleteClauses(freeClsID, freeClsPageAddresses, removeIDStream,
             clauseStoreInputStream1, clauseStoreOutputStream1, locationInputStream,
             mCmd, mClsStore, CLAUSE_PAGE_SIZE);
@@ -571,10 +572,10 @@ void clause_store_handler(ap_uint<128>* clauseStore, ap_uint<128>* clauseStore2,
 
     cls freeID;
     cls lastInsertedID;
-    printf("Starting main command loop\n");
+    CSH_PRINT("Starting main command loop\n");
     int cmdCounter = 0;
     while(true){
-        printf("Reading command #%d...\n", cmdCounter++);
+        CSH_PRINT("\nReading command #%d...", cmdCounter++);
         ap_axiu<96,0,0,0> getCommand = clauseStoreInputStream1.read();
         unsigned int code = getCommand.data.range(95,64);
 
@@ -588,12 +589,12 @@ void clause_store_handler(ap_uint<128>* clauseStore, ap_uint<128>* clauseStore2,
             CSH_PRINT("SEND_LEN%s command completed", 
                      (code == csh::SEND_LEN_BCP) ? "_BCP" : "");
         }else if(code == csh::SEND_CLS){
-            CSH_PRINT("SEND_CLS command processing started");
+            CSH_PRINT("SEND_CLS start");
             sendData_dataflow(clauseStore, clauseStore2, cmd, cmd2,
                 ORIGINAL_CLS_CNT, CLAUSE_PAGE_SIZE,
                 clauseStoreInputStream1, clauseStoreInputStream2,
                 clauseStoreOutputStream1, clauseStoreOutputStream2);
-            CSH_PRINT("SEND_CLS command completed");
+            CSH_PRINT("SEND_CLS end");
         }else if(code == csh::SAVE){
             CSH_PRINT("SAVE command - numElements: %u", (unsigned int)getCommand.data.range(31,0));
             clauseMetaData tmp_cmd;
@@ -601,27 +602,28 @@ void clause_store_handler(ap_uint<128>* clauseStore, ap_uint<128>* clauseStore2,
 
             ap_axiu<32,0,0,0> sendData;
             if((freeClsPageAddresses.size()*(CLAUSE_PAGE_SIZE-1) < tmp_cmd.numElements) || freeClsID.empty()){
-                printf("ERROR: Not enough space for clause - free pages: %u, needed: %u, freeID empty: %s\n", 
+                CSH_PRINT("ERROR: Not enough space for clause - free pages: %u, needed: %u, freeID empty: %s", 
                        freeClsPageAddresses.size(), tmp_cmd.numElements, freeClsID.empty() ? "true" : "false");
                 sendData.data = -4;
                 clauseStoreOutputStream1.write(sendData);
             }else{
                 tmp_cmd.addressStart = freeClsPageAddresses.read();
-                printf("Got address start: %u from freeClsPageAddresses\n", tmp_cmd.addressStart);
+                CSH_PRINT("Got address start: %u from freeClsPageAddresses", tmp_cmd.addressStart);
                 
                 freeID = freeClsID.read();
-                printf("Got freeID: %u from freeClsID stream\n", freeID);
+                CSH_PRINT("Got freeID: %u from freeClsID stream", freeID);
                 lastInsertedID = freeID;
                 cmd[freeID] = tmp_cmd;
+                cmd2[freeID] = tmp_cmd;
                 
-                printf("Update cmd[%u] to: addressStart=%u, numElements=%u\n", 
+                CSH_PRINT("Update cmd[%u] to: addressStart=%u, numElements=%u", 
                         freeID, cmd[freeID].addressStart, cmd[freeID].numElements);
 
                 sendData.data = freeID;
                 clauseStoreOutputStream1.write(sendData);
-                saveData(clauseStore, freeClsPageAddresses,
+                saveData(clauseStore, clauseStore2, freeClsPageAddresses,
                     tmp_cmd, CLAUSE_PAGE_SIZE, clauseStoreInputStream1, locationInputStream);
-                printf("Finished saveData\n");
+                CSH_PRINT("Finished saveData");
             }            
             CSH_PRINT("SAVE command completed");
         }else if(code == csh::BUCKET){
@@ -630,22 +632,22 @@ void clause_store_handler(ap_uint<128>* clauseStore, ap_uint<128>* clauseStore2,
             if(lbdLevelIndex > 9){
                 lbdLevelIndex = 9;
             }
-            printf("BUCKET - lbdLevelIndex: %u, freeID: %u\n", lbdLevelIndex, freeID);
+            CSH_PRINT("BUCKET - lbdLevelIndex: %u, freeID: %u", lbdLevelIndex, freeID);
 
             usedClsIDBuckets[_FPGA_MAX_CLAUSES*lbdLevelIndex+tracker[lbdLevelIndex].insertIdx] = freeID;
             tracker[lbdLevelIndex].insertIdx = (tracker[lbdLevelIndex].insertIdx+1) % _FPGA_MAX_CLAUSES;
             tracker[lbdLevelIndex].usedCount++;
             LBDBucketCount[0][lbdLevelIndex]++;
             usedTotalIDCount++;
-            printf("After BUCKET - usedCount: %u, total: %u\n", tracker[lbdLevelIndex].usedCount, usedTotalIDCount);
+            CSH_PRINT("After BUCKET - usedCount: %u, total: %u", tracker[lbdLevelIndex].usedCount, usedTotalIDCount);
         }else if(code == csh::DELETE){
-            printf("DELETE start - usedTotalIDCount: %u, PRUNE_PERCENTAGE: %f\n", usedTotalIDCount, PRUNE_PERCENTAGE);
+            CSH_PRINT("DELETE start - usedTotalIDCount: %u, PRUNE_PERCENTAGE: %f", usedTotalIDCount, PRUNE_PERCENTAGE);
             unsigned int removeTotal = usedTotalIDCount * PRUNE_PERCENTAGE;
             usedTotalIDCount -= removeTotal;
             ap_axiu<32,0,0,0> sendData;
             sendData.data = removeTotal;
             clauseStoreOutputStream1.write(sendData);
-            printf("Will delete %u clauses\n", removeTotal);
+            CSH_PRINT("Will delete %u clauses", removeTotal);
 
             if(removeTotal > 0){
                 deleteClauses_wrapper(freeClsID, freeClsPageAddresses,
@@ -656,7 +658,7 @@ void clause_store_handler(ap_uint<128>* clauseStore, ap_uint<128>* clauseStore2,
             CSH_PRINT("DELETE command completed");
         }
     }
-    printf("Exited main loop, writing LBD stats\n");
+    CSH_PRINT("Exited main loop, writing LBD stats\n");
     WRITE_OUT_LBD_STATS: for(unsigned int i = 0; i < _FPGA_MAX_LBD_BUCKETS; i++){
         trackLBD[i] = LBDBucketCount[0][i];
         trackLBD[i+_FPGA_MAX_LBD_BUCKETS] = LBDBucketCount[1][i];
