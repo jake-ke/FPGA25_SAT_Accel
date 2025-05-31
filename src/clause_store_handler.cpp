@@ -220,7 +220,8 @@ void sendData_dataflow(const ap_uint<128> mClsStore[_FPGA_MAX_LITERAL_ELEMENTS/4
 void saveData(ap_uint<128> mClsStore[_FPGA_MAX_LITERAL_ELEMENTS/4],
     ap_uint<128> mClsStore2[_FPGA_MAX_LITERAL_ELEMENTS/4],
     mmuStream<unsigned int, _MAX_PAGES_CLS_STORE_>& freeClsPageAddresses,
-    const clauseMetaData cmd, const unsigned int CLAUSE_PAGE_SIZE, hls::stream<ap_axiu<96,0,0,0>>& clauseStoreInputStream1,
+    clauseMetaData mCmd[_FPGA_MAX_CLAUSES], clauseMetaData mCmd2[_FPGA_MAX_CLAUSES],
+    const cls freeID, const clauseMetaData cmd, const unsigned int CLAUSE_PAGE_SIZE, hls::stream<ap_axiu<96,0,0,0>>& clauseStoreInputStream1,
     hls::stream<ap_axiu<64,0,0,0>>& locationInputStream){
     #pragma HLS inline off
 
@@ -275,6 +276,9 @@ void saveData(ap_uint<128> mClsStore[_FPGA_MAX_LITERAL_ELEMENTS/4],
             get = 0;
         }  
     }
+
+    mCmd[freeID] = cmd;
+    mCmd2[freeID] = cmd;
 
     updateLitStorePos.data = lh::EXIT;
     locationInputStream.write(updateLitStorePos);
@@ -613,8 +617,8 @@ void clause_store_handler(ap_uint<128>* clauseStore, ap_uint<128>* clauseStore2,
                 freeID = freeClsID.read();
                 CSH_PRINT("Got freeID: %u from freeClsID stream", freeID);
                 lastInsertedID = freeID;
-                cmd[freeID] = tmp_cmd;
-                cmd2[freeID] = tmp_cmd;
+                //cmd[freeID] = tmp_cmd;
+                //cmd2[freeID] = tmp_cmd;
                 
                 CSH_PRINT("Update cmd[%u] to: addressStart=%u, numElements=%u", 
                         freeID, cmd[freeID].addressStart, cmd[freeID].numElements);
@@ -622,7 +626,7 @@ void clause_store_handler(ap_uint<128>* clauseStore, ap_uint<128>* clauseStore2,
                 sendData.data = freeID;
                 clauseStoreOutputStream1.write(sendData);
                 saveData(clauseStore, clauseStore2, freeClsPageAddresses,
-                    tmp_cmd, CLAUSE_PAGE_SIZE, clauseStoreInputStream1, locationInputStream);
+                    cmd, cmd2, freeID, tmp_cmd, CLAUSE_PAGE_SIZE, clauseStoreInputStream1, locationInputStream);
                 CSH_PRINT("Finished saveData");
             }            
             CSH_PRINT("SAVE command completed");

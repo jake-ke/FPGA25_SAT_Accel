@@ -546,9 +546,9 @@ bool solve(std::string xclBinFile, std::string inputFilePath, std::string output
     OCL_CHECK(err, err = satSolverKernel.setArg(argN++, lmdBuffer));
     OCL_CHECK(err, err = satSolverKernel.setArg(argN++, miscBuffer));
 
-    OCL_CHECK(err, err = q.enqueueMigrateMemObjects({clsStoreBuffer, 
+    OCL_CHECK(err, err = q.enqueueMigrateMemObjects({clsStoreBuffer, clsStoreBuffer2,
         trackLBDCountBuffer,
-        cmdBuffer,
+        cmdBuffer, cmdBuffer2,
         litStoreBuffer,
         answerStackBuffer, 
         lmdBuffer, clsStatesBuffer, miscBuffer}, 0 /* 0 means from host*/));
