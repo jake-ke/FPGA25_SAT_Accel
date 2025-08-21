@@ -10,7 +10,6 @@ RD="\033[0;31m"
 GN="\033[0;32m"
 NC="\033[0m"
 
-cd src/bin
 if [ -z "${DATA_PATH}" ]; then
 	echo -e "${RD}DATA_PATH is not set. Pass via environment or CMake."
 	exit 1
